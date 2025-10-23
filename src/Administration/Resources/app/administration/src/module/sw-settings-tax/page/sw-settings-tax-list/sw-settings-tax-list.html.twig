@@ -20,7 +20,7 @@
             {{ $tc('sw-settings.index.title') }}
             <mt-icon
                 name="regular-chevron-right-xs"
-                size="16px"
+                size="12px"
             /> {{ $tc('sw-settings-tax.list.textHeadline') }}
             {% endblock %}
 
@@ -246,7 +246,8 @@
                                 :disabled="isLoading"
                                 :is-loading="isLoading"
                                 :process-success="false"
-                                variant="ghost"
+                                variant="primary"
+                                ghost
                                 @click="showSortingModal = true"
                             >
                                 {{ $tc('sw-settings-tax.list.taxProvider.changePriorityButton') }}
@@ -255,11 +256,10 @@
                     </template>
 
                     <template v-if="!isLoading">
-                        <sw-empty-state
+                        <mt-empty-state
                             v-if="noTaxProvidersFound"
-                            :title="$tc('sw-settings-tax.list.taxProvider.messageEmptyTitle')"
-                            :absolute="false"
-                            :show-description="false"
+                            :icon="$route.meta.$module.icon"
+                            :headline="$tc('sw-settings-tax.list.taxProvider.messageEmptyTitle')"
                         />
 
                         <div
@@ -290,8 +290,8 @@
                                     <mt-switch
                                         :label="$tc('sw-settings-tax.list.taxProvider.labelActive')"
                                         :disabled="!acl.can('tax.editor') || undefined"
-                                        :checked="taxProvider.active"
-                                        @change="onChangeTaxProviderActive(taxProvider)"
+                                        :model-value="taxProvider.active"
+                                        @update:model-value="onChangeTaxProviderActive(taxProvider)"
                                     />
                                 </div>
                             </template>

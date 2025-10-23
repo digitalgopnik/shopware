@@ -1,5 +1,4 @@
 import template from './sw-media-display-options.html.twig';
-import './sw-media-display-options.scss';
 
 /**
  * @sw-package discovery
@@ -108,13 +107,15 @@ export default {
         },
 
         presentationOptions() {
-            return this.previewOptions?.map((item) => {
-                return {
-                    id: item.value,
-                    value: item.value,
-                    label: item.name,
-                };
-            }) ?? [];
+            return (
+                this.previewOptions?.map((item) => {
+                    return {
+                        id: item.value,
+                        value: item.value,
+                        label: item.name,
+                    };
+                }) ?? []
+            );
         },
 
         sortOptionsSelect() {

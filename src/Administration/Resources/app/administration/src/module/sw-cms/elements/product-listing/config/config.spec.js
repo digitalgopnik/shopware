@@ -69,7 +69,6 @@ async function createWrapper(activeTab = 'sorting') {
                     'sw-container': true,
                     'sw-tabs-item': true,
 
-                    'sw-empty-state': true,
                     'sw-tabs': {
                         data() {
                             return { active: activeTab };
@@ -101,6 +100,15 @@ async function createWrapper(activeTab = 'sorting') {
                     },
                     repositoryFactory: {
                         create: (entity) => repositoryMockFactory(entity),
+                    },
+                },
+                mocks: {
+                    $route: {
+                        meta: {
+                            $module: {
+                                icon: 'solid-content',
+                            },
+                        },
                     },
                 },
             },
@@ -142,11 +150,6 @@ describe('src/module/sw-cms/elements/product-listing/config', () => {
         Shopware.Store.register({
             id: 'cmsPage',
         });
-    });
-
-    it('should be a Vue.js component', async () => {
-        const wrapper = await createWrapper();
-        expect(wrapper.vm).toBeTruthy();
     });
 
     it('should contain tab items content, sorting and filter', async () => {
@@ -331,7 +334,7 @@ describe('src/module/sw-cms/elements/product-listing/config', () => {
         const showPropertySearchField = wrapper.find(
             'sw-simple-search-field-stub.sw-cms-element-product-listing-config-filter-property-search',
         );
-        const showPropertyStatusGrid = wrapper.find('.sw-cms-el-config-product-listing-property-grid');
+        const showPropertyStatusGrid = wrapper.find('.sw-cms-el-config-product-listing__property-grid');
 
         expect(showUseFilterByPropertiesSwitchField.exists()).toBeTruthy();
         expect(showPropertySearchField.exists()).toBeTruthy();

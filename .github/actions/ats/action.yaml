@@ -63,9 +63,21 @@ inputs:
     description: Number of shards
     default: "1"
 
+  artifact-prefix:
+    required: false
+    default: "ats"
+    description: "Prefix for the artifact name"
+
 runs:
   using: "composite"
   steps:
+    - uses: octo-sts/action@e480437973a6f6ac2e9caa40ecabedc870d76395 # v1.0.1
+      id: create-pr-token
+      with:
+        scope: shopware
+        identity: CreatePR
+      continue-on-error: true
+
     - name: Start redis
       shell: bash
       run: docker run --name redis -p 6379:6379 -d redis:alpine
@@ -83,11 +95,12 @@ runs:
         echo "SHOPWARE_HTTP_CACHE_ENABLED=0" >> $GITHUB_ENV
         echo "SHOPWARE_DISABLE_UPDATE_CHECK=true" >> $GITHUB_ENV
         echo "BLUE_GREEN_DEPLOYMENT=1" >> $GITHUB_ENV
+        echo "ENABLE_SERVICES=0" >> $GITHUB_ENV
 
     - name: Setup Shopware
       uses: shopware/setup-shopware@main
       with:
-        mysql-version: "builtin"
+        mysql-version: 'builtin'
         shopware-version: ${{ github.ref }}
         shopware-repository: ${{ github.repository }}
         install: ${{ inputs.install }}
@@ -120,12 +133,26 @@ runs:
 
     - uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 22
+
+    - name: Cache npm packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ inputs.directory }}/node_modules
+          ~/.npm
+        key: ${{ runner.os }}-${{ inputs.directory }}-${{ hashFiles(format('{0}/package-lock.json', inputs.directory)) }}
+        restore-keys: |
+          ${{ runner.os }}-${{ inputs.directory }}
 
     - name: Install dependencies
       shell: bash
       working-directory: ${{ inputs.directory }}
       run: npm ci
+
+    - name: Refresh Package List
+      shell: bash
+      run: sudo apt-get update --allow-releaseinfo-change
 
     - name: Install Playwright Browsers
       shell: bash
@@ -141,10 +168,35 @@ runs:
         CURRENTS_BUILD_ID: "${{ format('{0}-{1}-{2}', github.repository, github.run_id, github.run_attempt) }}${{ matrix.major && 'major' }}"
         ATS_CMD: ${{ inputs.use-currents && 'pwc' || 'playwright'}}
       run: npx $ATS_CMD test --project=${{ inputs.project }} --workers=${{ inputs.workers }} --shard=${{ inputs.shard }}/${{ inputs.shard-count }} ${{ inputs.extra-options }}
+      continue-on-error: ${{ contains(inputs.project, 'visual') }} # Visual tests are allowed to fail; the results will be uploaded regardless and checked regularly
 
     - uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: ats-${{ inputs.project }}-${{ inputs.shard }}-php${{ inputs.php-version }}-${{ inputs.major && '-major' || '' }}
+        name: ${{ inputs.artifact-prefix }}-${{ inputs.project }}-${{ inputs.shard }}-php${{ inputs.php-version }}-${{ inputs.major && '-major' || '' }}
         path: ${{ inputs.directory }}/test-results/
         retention-days: 3
+      continue-on-error: true
+
+    - name: Check for changes
+      id: diff
+      shell: bash
+      run: |
+        git diff --exit-code tests/acceptance/tests/ || echo "changed=true" >> $GITHUB_OUTPUT
+
+    - name: Create Pull Request
+      if: steps.diff.outputs.changed == 'true' && steps.create-pr-token.outputs.token != '' && contains(inputs.project, 'visual') && contains(inputs.extra-options, 'update-snapshots')
+      uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+      with:
+        token: ${{ steps.create-pr-token.outputs.token }}
+        add-paths: |
+          .gitignore
+          tests/acceptance/tests/**/*-snapshots/*.png
+        branch: update-ats-snapshots
+        branch-suffix: short-commit-hash
+        labels: |
+          domain/quality-ops
+        commit-message: "chore(ci): update acceptance test snapshots"
+        title: "chore(ci): update acceptance test snapshots"
+        body: "🤖 This PR updates acceptance test snapshots."
+      continue-on-error: true

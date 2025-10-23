@@ -41,7 +41,6 @@ use Shopware\Core\Checkout\Order\Aggregate\OrderLineItemDownload\OrderLineItemDo
 use Shopware\Core\Checkout\Order\Aggregate\OrderLineItemDownload\OrderLineItemDownloadEntity;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionCollection;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionEntity;
-use Shopware\Core\Checkout\Order\OrderDefinition;
 use Shopware\Core\Checkout\Order\OrderEntity;
 use Shopware\Core\Checkout\Order\OrderException;
 use Shopware\Core\Checkout\Payment\PaymentMethodEntity;
@@ -59,6 +58,8 @@ use Shopware\Core\Framework\DataAbstractionLayer\Pricing\CashRoundingConfig;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\EntitySearchResult;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsAnyFilter;
+use Shopware\Core\Framework\Feature;
+use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\ShopwareHttpException;
 use Shopware\Core\Framework\Test\TestCaseHelper\ReflectionHelper;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -69,6 +70,7 @@ use Shopware\Core\System\SalesChannel\Context\AbstractSalesChannelContextFactory
 use Shopware\Core\System\SalesChannel\Context\SalesChannelContextFactory;
 use Shopware\Core\System\SalesChannel\Context\SalesChannelContextService;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
+use Shopware\Core\System\SalesChannel\SalesChannelDefinition;
 use Shopware\Core\System\SalesChannel\SalesChannelEntity;
 use Shopware\Core\System\StateMachine\Aggregation\StateMachineState\StateMachineStateEntity;
 use Shopware\Core\System\StateMachine\Loader\InitialStateIdLoader;
@@ -82,6 +84,7 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
  * @internal
  */
 #[CoversClass(OrderConverter::class)]
+#[Package('checkout')]
 class OrderConverterTest extends TestCase
 {
     private EventDispatcher $eventDispatcher;
@@ -124,9 +127,15 @@ class OrderConverterTest extends TestCase
                     SalesChannelContextService::CUSTOMER_GROUP_ID => 'customer-group-id',
                     SalesChannelContextService::PERMISSIONS => OrderConverter::ADMIN_EDIT_ORDER_PERMISSIONS,
                     SalesChannelContextService::VERSION_ID => Defaults::LIVE_VERSION,
-                    SalesChannelContextService::SHIPPING_METHOD_ID => 'order-delivery-shipping-method-id',
                     SalesChannelContextService::PAYMENT_METHOD_ID => 'order-transaction-payment-method-id',
                 ];
+
+                if (!Feature::isActive('v6.8.0.0')) {
+                    $expectedOptions = array_merge($expectedOptions, [
+                        SalesChannelContextService::SHIPPING_METHOD_ID => 'order-delivery-shipping-method-id',
+                    ]);
+                }
+
                 static::assertSame($expectedOptions, $options);
 
                 return $this->getSalesChannelContext(true);
@@ -246,6 +255,7 @@ class OrderConverterTest extends TestCase
             $result['orderDateTime'],
             $result['stateId'],
             $result['languageId'],
+            $result['primaryOrderDeliveryId'],
         );
         for ($i = 0; $i < (is_countable($result['lineItems']) ? \count($result['lineItems']) : 0); ++$i) {
             unset($result['lineItems'][$i]['id']);
@@ -253,6 +263,7 @@ class OrderConverterTest extends TestCase
 
         for ($i = 0; $i < (is_countable($result['deliveries']) ? \count($result['deliveries']) : 0); ++$i) {
             unset(
+                $result['deliveries'][$i]['id'],
                 $result['deliveries'][$i]['shippingOrderAddress']['id'],
                 $result['deliveries'][$i]['shippingDateEarliest'],
                 $result['deliveries'][$i]['shippingDateLatest'],
@@ -502,7 +513,7 @@ class OrderConverterTest extends TestCase
     {
         $dispatcher = $this->createMock(EventDispatcherInterface::class);
         $dispatcher
-            ->expects(static::once())
+            ->expects($this->once())
             ->method('dispatch')
             ->willReturn(static::isInstanceOf(CartConvertedEvent::class));
 
@@ -566,7 +577,7 @@ class OrderConverterTest extends TestCase
 
         $dispatcher = $this->createMock(EventDispatcherInterface::class);
         $dispatcher
-            ->expects(static::once())
+            ->expects($this->once())
             ->method('dispatch')
             ->with(static::callback(static function (SalesChannelContextAssembledEvent $event) use ($order): bool {
                 static::assertSame($order, $event->getOrder());
@@ -583,7 +594,7 @@ class OrderConverterTest extends TestCase
 
         $addressRepository = $this->createMock(EntityRepository::class);
         $addressRepository
-            ->expects(static::once())
+            ->expects($this->once())
             ->method('search')
             ->willReturn(new EntitySearchResult(
                 'order_address',
@@ -605,7 +616,6 @@ class OrderConverterTest extends TestCase
             $this->createMock(SalesChannelContextFactory::class),
             $dispatcher,
             $this->createMock(NumberRangeValueGeneratorInterface::class),
-            $this->createMock(OrderDefinition::class),
             $addressRepository,
             $this->createMock(InitialStateIdLoader::class),
             $this->createMock(LineItemDownloadLoader::class),
@@ -643,6 +653,7 @@ class OrderConverterTest extends TestCase
         $order = $this->getOrder();
         $order->setBillingAddressId('order-billing-address-id');
         $delivery = $order->getDeliveries()?->first();
+        $order->setPrimaryOrderDelivery($delivery);
         static::assertNotNull($delivery);
         $delivery->setShippingOrderAddressId('order-shipping-address-id');
 
@@ -665,6 +676,7 @@ class OrderConverterTest extends TestCase
         $salesChannel = new SalesChannelEntity();
         $salesChannel->setId(TestDefaults::SALES_CHANNEL);
         $salesChannel->setLanguageId(Defaults::LANGUAGE_SYSTEM);
+        $salesChannel->setTaxCalculationType(SalesChannelDefinition::CALCULATION_TYPE_HORIZONTAL);
 
         $paymentMethod = new PaymentMethodEntity();
         $paymentMethod->setId('payment-method-id');
@@ -832,7 +844,6 @@ class OrderConverterTest extends TestCase
     {
         // Setup classes for OrderConverter
         // Static
-        $orderDefinition = new OrderDefinition();
         $initialStateIdLoader = $this->createMock(InitialStateIdLoader::class);
         $numberRangeValueGenerator = $this->createMock(NumberRangeValueGeneratorInterface::class);
         $numberRangeValueGenerator->method('getValue')->willReturn('10000');
@@ -906,7 +917,6 @@ class OrderConverterTest extends TestCase
             $salesChannelContextFactory,
             $eventDispatcher ?? $this->eventDispatcher,
             $numberRangeValueGenerator,
-            $orderDefinition,
             $orderAddressRepository,
             $initialStateIdLoader,
             $lineItemDownloadLoader,
@@ -1366,7 +1376,6 @@ class OrderConverterTest extends TestCase
             'affiliateCode' => null,
             'campaignCode' => null,
             'source' => null,
-            'createdById' => null,
             'itemRounding' => [
                 'decimals' => 2,
                 'extensions' => [],
@@ -1401,6 +1410,7 @@ class OrderConverterTest extends TestCase
                 'order-rule-id-1',
                 'order-rule-id-2',
             ],
+            'taxCalculationType' => SalesChannelDefinition::CALCULATION_TYPE_HORIZONTAL,
             'addresses' => [
                 [
                     'city' => 'billing-address-city',

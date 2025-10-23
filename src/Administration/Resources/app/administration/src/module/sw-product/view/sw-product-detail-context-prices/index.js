@@ -463,6 +463,10 @@ export default {
         },
 
         onQuantityEndChange(price, priceGroup) {
+            if (price.quantityEnd !== null && price.quantityEnd < price.quantityStart) {
+                price.quantityEnd = null;
+                return;
+            }
             // when not last price
             if (priceGroup.prices.indexOf(price) + 1 !== priceGroup.prices.length) {
                 return;
@@ -522,7 +526,7 @@ export default {
             newPriceRule.price = [];
 
             referencePrice.price.forEach((price, index) => {
-                newPriceRule.price[index] = { ...price }
+                newPriceRule.price[index] = { ...price };
             });
 
             this.product.prices.add(newPriceRule);

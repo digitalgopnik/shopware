@@ -35,12 +35,6 @@ async function createWrapper() {
 }
 
 describe('module/sw-cms/component/sw-cms-list-item', () => {
-    it('should be a Vue.js component', async () => {
-        const wrapper = await createWrapper();
-
-        expect(wrapper.vm).toBeTruthy();
-    });
-
     it('should not render default item layout background image with insufficient data', async () => {
         const wrapper = await createWrapper();
         await wrapper.setProps({
@@ -104,7 +98,8 @@ describe('module/sw-cms/component/sw-cms-list-item', () => {
                 ],
             },
             {
-                'background-image': 'url(administration/administration/static/img/cms/preview_product_list_product_listing.png)',
+                'background-image':
+                    'url(administration/administration/static/img/cms/preview_product_list_product_listing.png)',
                 'background-size': 'cover',
             },
         ],
