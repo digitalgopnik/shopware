@@ -1950,6 +1950,36 @@
                           "type": "single",
                           "required": true
                         }
+                      },
+                      "slots": {
+                        "overlay": [
+                          {
+                            "id": "cover-only-image-1",
+                            "type": "Sw:Content:Image",
+                            "properties": {
+                              "size": "large"
+                            },
+                            "accepts_context": {
+                              "product.cover": {
+                                "type": "single",
+                                "required": true
+                              }
+                            }
+                          },
+                          {
+                            "id": "featured-manufacturer-1",
+                            "type": "Sw:Content:Text",
+                            "properties": {
+                              "style": "manufacturer-badge"
+                            },
+                            "accepts_context": {
+                              "product.manufacturer.name": {
+                                "type": "single",
+                                "required": false
+                              }
+                            }
+                          }
+                        ]
                       }
                     },
                     {
@@ -1964,6 +1994,23 @@
                           "type": "single",
                           "required": true
                         }
+                      },
+                      "slots": {
+                        "overlay": [
+                          {
+                            "id": "cover-only-image-2",
+                            "type": "Sw:Content:Image",
+                            "properties": {
+                              "size": "medium"
+                            },
+                            "accepts_context": {
+                              "product.cover": {
+                                "type": "single",
+                                "required": true
+                              }
+                            }
+                          }
+                        ]
                       }
                     },
                     {
@@ -1978,6 +2025,23 @@
                           "type": "single",
                           "required": true
                         }
+                      },
+                      "slots": {
+                        "overlay": [
+                          {
+                            "id": "cover-only-image-3",
+                            "type": "Sw:Content:Image",
+                            "properties": {
+                              "size": "medium"
+                            },
+                            "accepts_context": {
+                              "product.cover": {
+                                "type": "single",
+                                "required": true
+                              }
+                            }
+                          }
+                        ]
                       }
                     }
                   ]
@@ -2195,7 +2259,8 @@
           "type": "Sw:Grid",
           "properties": {
             "columns": "1",
-            "gap": 32
+            "gap": 32,
+            "product": "{{productId}}"
           },
           "data_requirements": {
             "product": {
@@ -2300,6 +2365,46 @@
                               "product": {
                                 "type": "single",
                                 "required": true
+                              }
+                            }
+                          },
+                          {
+                            "id": "manufacturer-badge",
+                            "type": "Sw:Content:Text",
+                            "properties": {
+                              "style": "badge"
+                            },
+                            "accepts_context": {
+                              "product.manufacturer.name": {
+                                "type": "single",
+                                "required": false
+                              }
+                            }
+                          },
+                          {
+                            "id": "cover-thumbnail",
+                            "type": "Sw:Content:Image",
+                            "properties": {
+                              "width": 120,
+                              "height": 120
+                            },
+                            "accepts_context": {
+                              "product.cover": {
+                                "type": "single",
+                                "required": true
+                              }
+                            }
+                          },
+                          {
+                            "id": "media-gallery",
+                            "type": "Sw:Content:Gallery",
+                            "properties": {
+                              "thumbnailSize": "small"
+                            },
+                            "accepts_context": {
+                              "product.media": {
+                                "type": "collection",
+                                "required": false
                               }
                             }
                           }
