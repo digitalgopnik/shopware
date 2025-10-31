@@ -66,11 +66,6 @@ class CategoryContentLayoutDefinition extends EntityDefinition implements Conten
         return $this->getMetadataDeriver()->deriveRoutePattern($this->getContentLayoutEntityIdField());
     }
 
-    protected function getParentDefinitionClass(): ?string
-    {
-        return CategoryDefinition::class;
-    }
-
     protected function defineFields(): FieldCollection
     {
         return new FieldCollection([

@@ -66,11 +66,6 @@ class LandingPageContentLayoutDefinition extends EntityDefinition implements Con
         return $this->getMetadataDeriver()->deriveRoutePattern($this->getContentLayoutEntityIdField());
     }
 
-    protected function getParentDefinitionClass(): ?string
-    {
-        return LandingPageDefinition::class;
-    }
-
     protected function defineFields(): FieldCollection
     {
         return new FieldCollection([

@@ -66,11 +66,6 @@ class ProductContentLayoutDefinition extends EntityDefinition implements Content
         return $this->getMetadataDeriver()->deriveRoutePattern($this->getContentLayoutEntityIdField());
     }
 
-    protected function getParentDefinitionClass(): ?string
-    {
-        return ProductDefinition::class;
-    }
-
     protected function defineFields(): FieldCollection
     {
         return new FieldCollection([
