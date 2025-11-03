@@ -2,6 +2,7 @@
 
 namespace Shopware\Administration\Framework\Twig;
 
+use League\Flysystem\FilesystemOperator;
 use Pentatrion\ViteBundle\Service\FileAccessor;
 use Shopware\Core\Framework\Bundle as ShopwareBundle;
 use Shopware\Core\Framework\Log\Package;
@@ -24,10 +25,11 @@ class ViteFileAccessorDecorator extends FileAccessor
      * @internal
      */
     public function __construct(
-        array $configs,
+        private array $configs,
         private readonly AssetPackage $package,
         private readonly KernelInterface $kernel,
         private readonly Filesystem $filesystem,
+        private readonly FilesystemOperator $assetFilesystem,
     ) {
         $this->assetPath = $this->package->getUrl('');
 
@@ -36,14 +38,7 @@ class ViteFileAccessorDecorator extends FileAccessor
 
     public function hasFile(string $configName, string $fileType): bool
     {
-        try {
-            $bundle = $this->getBundleForConfig($configName);
-        } catch (\InvalidArgumentException) {
-            // we can't find a bundle with that name
-            return false;
-        }
-
-        return $this->filesystem->exists($bundle->getPath() . $this->getRelativeFileLocation($fileType));
+        return $this->assetFilesystem->fileExists(\sprintf('%s.vite/%s', $this->configs[$configName]['base'], self::FILES[$fileType]));
     }
 
     /**
@@ -57,7 +52,7 @@ class ViteFileAccessorDecorator extends FileAccessor
             return [];
         }
 
-        return $this->getContent($fileType, $bundle);
+        return $this->getContent($fileType, $bundle, $configName);
     }
 
     /**
@@ -65,7 +60,7 @@ class ViteFileAccessorDecorator extends FileAccessor
      */
     public function getBundleData(ShopwareBundle $bundle): array
     {
-        return $this->getContent(self::ENTRYPOINTS, $bundle);
+        return $this->getContent(self::ENTRYPOINTS, $bundle, '_default');
     }
 
     private function getRelativeFileLocation(string $fileType): string
@@ -90,7 +85,7 @@ class ViteFileAccessorDecorator extends FileAccessor
     /**
      * @return array<string, mixed>
      */
-    private function getContent(string $fileType, ShopwareBundle $bundle): array
+    private function getContent(string $fileType, ShopwareBundle $bundle, string $configName): array
     {
         // Depending on how many script tags are rendered, this method is called multiple times
         // Cache the content to avoid reading the file multiple times
@@ -102,7 +97,8 @@ class ViteFileAccessorDecorator extends FileAccessor
             }
 
             $content = json_decode(
-                $this->filesystem->readFile($viteEntryPointsPath),
+//                $this->filesystem->readFile($viteEntryPointsPath),
+                $this->assetFilesystem->read(\sprintf('%s.vite/%s', $this->configs[$configName]['base'], self::FILES[$fileType])),
                 true,
                 flags: \JSON_THROW_ON_ERROR
             );
