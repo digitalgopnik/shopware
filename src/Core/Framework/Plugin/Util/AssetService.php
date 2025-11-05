@@ -286,6 +286,8 @@ class AssetService
 
         CopyBatch::copy($this->assetFilesystem, ...$batches);
 
+        /** TODO clear cache @see \Shopware\Administration\Framework\Twig\ViteFileAccessorDecorator::getContent */
+
         foreach ($uploadEvent->filesToDelete as $file) {
             $this->assetFilesystem->delete(Path::join($targetDirectory, $file));
         }
