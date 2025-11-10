@@ -12,6 +12,16 @@ As we changed how we process and generate changelogs the "old" changelog files a
 Therefore, we removed all the internal code used to generate and validate them. 
 The whole `Shopware\Core\Framework\Changelog` namespace was removed. The code is not needed anymore, you should adjust the `RELEASE_INFO` and `UPGRADE` files manually instead.
 
+### App custom entity association handling
+We have changed behavior creating associations; an exception will be thrown if the referenced table does not exist, instead of creating the referenced table as it  used to be.
+
+To allowed the schema updater to skip creating associations if the referenced table does not exist, improving flexibility and robustness during schema updates, we also added a new optional attribute named `ignore-missing-reference` with association types (`one-to-one`, `one-to-many`, `many-to-one`, `many-to-many`).
+
+Example usage:
+```xml
+<one-to-many name="custom_entity" reference="quote_comment" ignore-missing-reference="true" store-api-aware="false" on-delete="set-null" />
+```
+
 ## Administration
 
 ## Storefront
@@ -21,7 +31,6 @@ The whole `Shopware\Core\Framework\Changelog` namespace was removed. The code is
 ## Hosting & Configuration
 
 ## Critical fixes
-
 
 # 6.7.4.0
 
